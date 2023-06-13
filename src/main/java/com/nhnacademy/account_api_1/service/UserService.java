@@ -1,6 +1,10 @@
 package com.nhnacademy.account_api_1.service;
 
+import com.nhnacademy.account_api_1.entity.Status;
+import com.nhnacademy.account_api_1.exception.AlreadyUserException;
+import com.nhnacademy.account_api_1.exception.NotFoundDataException;
 import com.nhnacademy.account_api_1.request.UserModify;
+import com.nhnacademy.account_api_1.response.UserEmailResponse;
 import com.nhnacademy.account_api_1.response.UserResponse;
 import com.nhnacademy.account_api_1.entity.User;
 import com.nhnacademy.account_api_1.repository.StatusRepository;
@@ -8,10 +12,15 @@ import com.nhnacademy.account_api_1.repository.UserRepository;
 import com.nhnacademy.account_api_1.request.UserRequest;
 import com.nhnacademy.account_api_1.request.UserStatus;
 import lombok.RequiredArgsConstructor;
+import net.bytebuddy.dynamic.DynamicType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,40 +34,32 @@ public class UserService {
         return userRepository.getUserResponseList();
     }
 
-
     @Transactional(readOnly = true)
-    public UserResponse getUser(Long id){
-        if(!userRepository.existsById(id)){
-            throw new IllegalArgumentException("No such User Data");
+    public Optional<UserResponse> getUser(String id){
+        return userRepository.findByUserId(id);
+    }
+
+    public void insertUser(UserRequest userRequest){
+        if(userRepository.existsByUserId(userRequest.getUserId()) || userRepository.existsByEmail(userRequest.getEmail())){
+            throw new AlreadyUserException("이미 존재하는 유저입니다.");
         }
-        return userRepository.getUserResponseByIndexId(id);
+        userRepository.save(new User(userRequest.getUserId(), userRequest.getPassword(), userRequest.getEmail(), statusRepository.getReferenceById(1)));
     }
 
-
-    public UserResponse insertUser(UserRequest userRequest){
-        if(userRepository.existsByUserId(userRequest.getUserId())){
-            throw new IllegalArgumentException("Already Exists UserId");
-        }
-
-        User user = userRepository.save(new User(userRequest.getUserId(), userRequest.getPassword(), userRequest.getEmail(), statusRepository.getReferenceById(1)));
-        return new UserResponse(user.getUserId(), user.getEmail());
+    public void updateUser(String id, UserModify userModify){
+        User user = userRepository.findUserByUserId(id).orElseThrow(
+                () -> new NotFoundDataException("존재하는 유저가 아닙니다."));
+        user.updateUser(userModify.getPassword(), userModify.getEmail());
     }
 
-    public void updateUser(Long id, UserModify userModify){
-        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No such User Data"));
-        user.setPassword(userModify.getPassword());
-        user.setEmail(userModify.getEmail());
+    public void updateUserStatus(String id, UserStatus userStatus){
+        User user = userRepository.findUserByUserId(id).orElseThrow(
+                () -> new NotFoundDataException("존재하는 유저가 아닙니다.")
+        );
+        user.setStatus(statusRepository.getReferenceById(userStatus.getStatus().getNumberOfStatus()));
     }
 
-    public void updateUserStatus(Long id, UserStatus userStatus){
-        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No such User data"));
-        user.setStatus(statusRepository.getReferenceById(userStatus.getStatus().getStatusCode()));
-    }
-
-    public void removeUser(Long id){
-        if(!userRepository.existsById(id)){
-            throw new IllegalArgumentException("No such User data");
-        }
-        userRepository.deleteById(id);
+    public Optional<UserEmailResponse> getUserByEmail(String email){
+        return userRepository.findByEmail(email);
     }
 }

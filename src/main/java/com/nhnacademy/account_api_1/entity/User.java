@@ -3,6 +3,7 @@ package com.nhnacademy.account_api_1.entity;
 import lombok.*;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -13,16 +14,15 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "index_id")
+    @Column(name = "user_index")
     private Long indexId;
 
     @Column(name = "user_id")
     private String userId;
 
-    @Setter
     private String password;
 
-    @Setter
+
     private String email;
 
     @Setter
@@ -35,6 +35,10 @@ public class User {
         this.password = password;
         this.email = email;
         this.status = status;
+    }
+    public void updateUser(String password, String email){
+        this.password = password;
+        this.email = email;
     }
 
 }
